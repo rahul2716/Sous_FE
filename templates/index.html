@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sous-AI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* --- ✨ New Aurora/Purple Theme Color Palette --- */
+            --background-start: #1a1a2e;
+            --background-end: #16213e;
+            --sidebar-bg: rgba(26, 26, 46, 0.6);
+            --chat-panel-bg: rgba(15, 15, 25, 0.4);
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0c0;
+            --accent-primary: #9b59b6;
+            --accent-secondary: #8e44ad;
+            --user-bubble-bg: #9b59b6;
+            --bot-bubble-bg: #2c3e50;
+            --input-bg: rgba(44, 62, 80, 0.7);
+            --border-color: rgba(142, 68, 173, 0.3);
+            --font-family: 'Inter', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* --- ✨ Aurora Background --- */
+        #aurora-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--background-start), var(--background-end));
+            z-index: -2;
+        }
+        #aurora-background::before, #aurora-background::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            opacity: 0.15;
+            filter: blur(100px);
+            mix-blend-mode: screen;
+        }
+        #aurora-background::before {
+            background: #e94560;
+            top: -200px;
+            left: -200px;
+            animation: move-glow1 20s infinite alternate;
+        }
+        #aurora-background::after {
+            background: #0f3460;
+            bottom: -200px;
+            right: -200px;
+            animation: move-glow2 25s infinite alternate;
+        }
+        @keyframes move-glow1 {
+            from { transform: translate(0, 0) rotate(0deg); }
+            to { transform: translate(200px, 300px) rotate(180deg); }
+        }
+        @keyframes move-glow2 {
+            from { transform: translate(0, 0) rotate(0deg); }
+            to { transform: translate(-200px, -300px) rotate(-180deg); }
+        }
+
+        #app-layout {
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .sidebar-header { text-align: left; }
+        .sidebar-header h1 {
+            font-size: 2rem; font-weight: 700; color: #fff; margin: 0;
+        }
+        .sidebar-header p {
+            font-size: 1rem; color: var(--accent-primary); margin: 5px 0 0;
+        }
+
+        .sidebar-widget {
+            background: transparent; padding: 0;
+        }
+        .sidebar-widget h3 {
+            margin-top: 0; font-size: 1rem; font-weight: 500;
+            color: var(--text-secondary); display: flex; align-items: center;
+            gap: 10px; padding-bottom: 10px; margin-bottom: 15px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .sidebar-widget ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;}
+        .sidebar-widget li {
+            font-size: 0.95rem; line-height: 1.6; color: var(--text-primary);
+            display: flex; align-items: center; gap: 12px;
+            padding: 8px; border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+         .sidebar-widget li:hover { background: rgba(255, 255, 255, 0.05); }
+         .sidebar-widget li svg { width: 18px; height: 18px; flex-shrink: 0; stroke: var(--text-secondary); }
+
+        #chat-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--chat-panel-bg);
+        }
+
+        #chat-window {
+            flex-grow: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
+        }
+        .message {
+            padding: 14px 20px; border-radius: 18px; line-height: 1.6; max-width: 80%; word-wrap: break-word;
+        }
+        .user-message {
+            background-color: var(--user-bubble-bg); color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px;
+        }
+        .bot-message {
+            background-color: var(--bot-bubble-bg); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 4px;
+        }
+        .bot-message p, .bot-message ul, .bot-message ol { margin: 0.5em 0; }
+        .bot-message h1, .bot-message h2, .bot-message h3 { margin: 1em 0 0.5em; font-weight: 600; color: #fff; }
+        .bot-message ul, .bot-message ol { padding-left: 20px; }
+        .bot-message li { margin-bottom: 8px; }
+
+        .input-area {
+            padding: 16px 24px;
+            flex-shrink: 0;
+        }
+        #chat-form {
+            display: flex;
+            align-items: center;
+            background: var(--input-bg);
+            border-radius: 25px;
+            border: 1px solid var(--border-color);
+            padding: 5px;
+            transition: border-color 0.2s;
+        }
+        #chat-form:focus-within { border-color: var(--accent-primary); }
+
+        #message-input {
+            flex-grow: 1; border: none; padding: 12px 20px;
+            font-size: 1rem; background: transparent;
+            font-family: var(--font-family); color: var(--text-primary);
+        }
+        #message-input:focus { outline: none; }
+        #chat-form button {
+            background-color: var(--accent-primary); color: white; border: none;
+            width: 38px; height: 38px;
+            border-radius: 50%; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            transition: background-color 0.2s;
+        }
+        #chat-form button:hover { background-color: var(--accent-secondary); }
+        #chat-form button svg { width: 20px; height: 20px; }
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: none; justify-content: center;
+            align-items: center; z-index: 1000; backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: #1a1a2e; padding: 30px; border-radius: 16px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2); width: 90%; max-width: 500px;
+            border: 1px solid var(--border-color);
+        }
+        .modal-content h2 { margin-top: 0; font-weight: 700; color: #fff; }
+        .modal-content p { color: var(--text-secondary); margin-bottom: 20px; }
+        .modal-content textarea, .modal-content input {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);
+            font-size: 1rem; margin-bottom: 20px; font-family: var(--font-family);
+            background-color: var(--input-bg); color: var(--text-primary);
+        }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+        .primary-btn { background-color: var(--accent-primary); color: white; }
+        .secondary-btn { background-color: #2c3e50; color: var(--text-primary); }
+        
+        .loading-dots span {
+            animation: blink 1.4s infinite both;
+            display: inline-block;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink {
+            0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; }
+        }
+
+        @media (max-width: 900px) {
+            #sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="aurora-background"></div>
+
+    <div id="app-layout">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <h1>Sous-AI</h1>
+                <p>Your Creative Cooking Partner</p>
+            </div>
+            <div class="sidebar-widget">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path></svg>
+                    Chef's Tools
+                </h3>
+                <ul>
+                    <li id="ingredients-btn" style="cursor: pointer;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12,2A10,10,0,0,0,2,12a9.89,9.89,0,0,0,7.69,9.69,1,1,0,0,0,.31-2A7.77,7.77,0,0,1,12,4a7.92,7.92,0,0,1,8,8,1,1,0,0,0,2,0A10,10,0,0,0,12,2Z"/></svg>
+                        What can I make?
+                    </li>
+                    <li id="meal-plan-btn" style="cursor: pointer;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19,4H18V3a1,1,0,0,0-2,0V4H8V3A1,1,0,0,0,6,3V4H5A3,3,0,0,0,2,7V19a3,3,0,0,0,3,3H19a3,3,0,0,0,3-3V7A3,3,0,0,0,19,4Zm1,15a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V12H20Zm0-9H4V7A1,1,0,0,1,5,6H19a1,1,0,0,1,1,1Z"/></svg>
+                        Create a Meal Plan
+                    </li>
+                </ul>
+            </div>
+             <div class="sidebar-widget">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 12c0-5.25-4.25-9.5-9.5-9.5S2.5 6.75 2.5 12s4.25 9.5 9.5 9.5s9.5-4.25 9.5-9.5z"></path><path d="M9.5 12l2 2 4-4"></path></svg>
+                    Quick Conversions
+                </h3>
+                <ul>
+                    <li>1 tbsp = 3 tsp (15ml)</li>
+                    <li>1 cup = 16 tbsp (240ml)</li>
+                    <li>1 oz ≈ 28 grams</li>
+                    <li>1 lb ≈ 454 grams</li>
+                    <li>350°F ≈ 175°C (Oven)</li>
+                    <li>400°F ≈ 200°C (Oven)</li>
+                </ul>
+            </div>
+        </aside>
+        
+        <main id="chat-panel">
+            <div id="chat-window">
+                <div class="message bot-message">
+                    Hello! I'm your Sous-Chef. 👨‍🍳<br><br>Ask me for a recipe, or use the tools in the sidebar to get creative ideas!
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <form id="chat-form">
+                    <input type="text" id="message-input" placeholder="Share your thoughts with Sous-Chef..." autocomplete="off" required>
+                    <button type="submit">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="ingredients-modal">
+        <div class="modal-content">
+            <h2>What ingredients do you have?</h2>
+            <p>List your ingredients, separated by commas (e.g., chicken, onion, tomatoes, ginger).</p>
+            <textarea id="ingredients-input" rows="4"></textarea>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary-btn" id="ingredients-cancel">Cancel</button>
+                <button class="modal-btn primary-btn" id="ingredients-submit">Find Recipes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="meal-plan-modal">
+        <div class="modal-content">
+            <h2>Create a Meal Plan</h2>
+            <p>Describe the kind of meal plan you want (e.g., a 3-day vegetarian plan, a week of quick dinners).</p>
+            <input type="text" id="meal-plan-input">
+            <div class="modal-buttons">
+                <button class="modal-btn secondary-btn" id="meal-plan-cancel">Cancel</button>
+                <button class="modal-btn primary-btn" id="meal-plan-submit">Generate Plan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const chatWindow = document.getElementById('chat-window');
+        const converter = new showdown.Converter({ smartIndentationFix: true });
+
+        // --- Modal Logic ---
+        const ingredientsModal = document.getElementById('ingredients-modal');
+        const mealPlanModal = document.getElementById('meal-plan-modal');
+
+        document.getElementById('ingredients-btn').addEventListener('click', () => ingredientsModal.style.display = 'flex');
+        document.getElementById('meal-plan-btn').addEventListener('click', () => mealPlanModal.style.display = 'flex');
+
+        function setupModal(modalId, submitBtnId, cancelBtnId, inputId, requestType) {
+            const modal = document.getElementById(modalId);
+            const input = document.getElementById(inputId);
+            document.getElementById(cancelBtnId).addEventListener('click', () => modal.style.display = 'none');
+            modal.addEventListener('click', (e) => { if(e.target === modal) modal.style.display = 'none'; });
+            document.getElementById(submitBtnId).addEventListener('click', () => {
+                const userInput = input.value.trim();
+                if (userInput) {
+                    const specificType = (requestType === 'ingredients') ? 'ingredients' : 'meal_plan';
+                    sendMessage(userInput, specificType);
+                    input.value = '';
+                    modal.style.display = 'none';
+                }
+            });
+        }
+        setupModal('ingredients-modal', 'ingredients-submit', 'ingredients-cancel', 'ingredients-input', 'ingredients');
+        setupModal('meal-plan-modal', 'meal-plan-submit', 'meal-plan-cancel', 'meal-plan-input', 'meal_plan');
+
+        // --- Chat Submission Logic ---
+        chatForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            // ✨ BUG FIX IS HERE: Changed message-input to messageInput
+            const userInput = messageInput.value.trim();
+            if (userInput === '') return;
+            sendMessage(userInput, 'chat');
+            messageInput.value = '';
+        });
+
+        async function sendMessage(text, type) {
+            appendMessage(text, 'user');
+            const loadingIndicator = showLoadingIndicator();
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, type: type })
+                });
+                if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
+                const data = await response.json();
+                loadingIndicator.remove();
+                appendMessage(data.reply, 'bot');
+            } catch (error) {
+                console.error("Error sending message:", error);
+                loadingIndicator.remove();
+                appendMessage("Sorry, I'm having trouble connecting. Please check the server and try again.", 'bot');
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${sender}-message`);
+            if (sender === 'bot') {
+                messageDiv.innerHTML = converter.makeHtml(text);
+            } else {
+                messageDiv.textContent = text;
+            }
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function showLoadingIndicator() {
+             const loadingDiv = document.createElement('div');
+             loadingDiv.classList.add('message', 'bot-message');
+             loadingDiv.innerHTML = `<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>`;
+             chatWindow.appendChild(loadingDiv);
+             chatWindow.scrollTop = chatWindow.scrollHeight;
+             return loadingDiv;
+        }
+    </script>
+</body>
+</html>
+
